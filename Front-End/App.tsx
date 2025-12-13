@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { HashRouter, Routes, Route, useNavigate, useParams, Navigate, useLocation } from 'react-router-dom';
-import Layout from './components/Layout';
-import ArticleCard from './components/ArticleCard';
+import Layout from './components/Layout.tsx';
+import ArticleCard from './components/ArticleCard.tsx';
 import { api } from './services/api.ts';
-import { User, Article, Category, StrapiAttributes, UserRole } from './types';
+import { User, Article, Category, StrapiAttributes, UserRole } from './types.ts';
 import { getImageUrl } from './constants';
 
 // --- Auth Hook (Local Implementation for simplicity) ---
