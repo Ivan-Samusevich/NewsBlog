@@ -4,12 +4,18 @@ import { AuthResponse, StrapiResponse, StrapiSingleResponse, Article, Category, 
 // TOGGLE THIS TO FALSE TO USE REAL STRAPI BACKEND
 const USE_MOCK_DATA = true;
 
-
+/**
+ * Helper to build Strapi filters without 'qs' library
+ */
 const buildQuery = (params: Record<string, any>) => {
   const query = new URLSearchParams();
   Object.keys(params).forEach(key => {
     if (typeof params[key] === 'object') {
+      // Very basic nesting support for demo
       Object.keys(params[key]).forEach(subKey => {
+         // This is a simplification. Real qs is complex.
+         // For demo we construct manual strings for known paths if needed
+         // or just rely on simple params.
       });
     } else {
       query.append(key, params[key]);
@@ -216,5 +222,35 @@ export const api = {
       body: JSON.stringify({ data }),
     });
     if (!res.ok) throw new Error('Failed to create article');
+  },
+
+  async updateArticle(id: number, data: Partial<Article> & { category?: number }): Promise<void> {
+    if (USE_MOCK_DATA) {
+      await delay(800);
+      const index = MOCK_ARTICLES.findIndex(a => a.id === id);
+      if (index !== -1) {
+        const existing = MOCK_ARTICLES[index];
+        const categoryObj = data.category 
+          ? MOCK_CATEGORIES.find(c => c.id === Number(data.category)) 
+          : existing.attributes.category.data;
+
+        MOCK_ARTICLES[index] = {
+          ...existing,
+          attributes: {
+            ...existing.attributes,
+            ...data,
+            category: { data: categoryObj }
+          }
+        };
+      }
+      return;
+    }
+
+    const res = await fetch(`${API_URL}/api/articles/${id}`, {
+      method: 'PUT',
+      headers: api.getHeaders(),
+      body: JSON.stringify({ data }),
+    });
+    if (!res.ok) throw new Error('Failed to update article');
   }
 };

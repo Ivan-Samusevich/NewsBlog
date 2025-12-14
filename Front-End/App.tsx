@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { HashRouter, Routes, Route, useNavigate, useParams, Navigate, useLocation } from 'react-router-dom';
-import Layout from './components/Layout.tsx';
-import ArticleCard from './components/ArticleCard.tsx';
-import { api } from './services/api.ts';
-import { User, Article, Category, StrapiAttributes, UserRole } from './types.ts';
+import Layout from './components/Layout';
+import ArticleCard from './components/ArticleCard';
+import { api } from './services/api';
+import { User, Article, Category, StrapiAttributes, UserRole } from './types';
 import { getImageUrl } from './constants';
 
 // --- Auth Hook (Local Implementation for simplicity) ---
@@ -220,7 +220,11 @@ const ArticlePage: React.FC<{ user: User | null }> = ({ user }) => {
           {/* RBAC Action Buttons */}
           {isEditor && (
              <div className="flex space-x-2">
-                <button className="text-slate-400 hover:text-primary transition-colors p-2" title="Edit">
+                <button 
+                  onClick={() => navigate(`/edit/${article.attributes.slug}`)}
+                  className="text-slate-400 hover:text-primary transition-colors p-2" 
+                  title="Edit"
+                >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                 </button>
                 <button onClick={handleDelete} className="text-slate-400 hover:text-red-600 transition-colors p-2" title="Delete">
@@ -356,7 +360,155 @@ const CreateArticlePage: React.FC<{ user: User | null }> = ({ user }) => {
   );
 };
 
-// 4. Login Page
+// 4. Edit Article Page
+const EditArticlePage: React.FC<{ user: User | null }> = ({ user }) => {
+  const { slug } = useParams<{ slug: string }>();
+  const [articleId, setArticleId] = useState<number | null>(null);
+  const [title, setTitle] = useState('');
+  const [excerpt, setExcerpt] = useState('');
+  const [content, setContent] = useState('');
+  const [categoryId, setCategoryId] = useState<number | ''>('');
+  const [categories, setCategories] = useState<StrapiAttributes<Category>[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Only allow editors
+    if (user?.role?.type !== 'editor') {
+      navigate('/');
+      return;
+    }
+
+    const init = async () => {
+      if (!slug) return;
+      try {
+        const [catRes, articleRes] = await Promise.all([
+          api.getCategories(),
+          api.getArticleBySlug(slug)
+        ]);
+        
+        setCategories(catRes.data);
+        
+        if (articleRes.data) {
+          const a = articleRes.data;
+          setArticleId(a.id);
+          setTitle(a.attributes.title);
+          setExcerpt(a.attributes.excerpt);
+          setContent(a.attributes.content);
+          // Assuming the API returns the full nested category object
+          if (a.attributes.category?.data?.id) {
+             setCategoryId(a.attributes.category.data.id);
+          }
+        } else {
+          alert("Article not found");
+          navigate('/');
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    init();
+  }, [user, navigate, slug]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!categoryId || !articleId) return;
+    setSubmitting(true);
+    
+    try {
+      await api.updateArticle(articleId, {
+        title,
+        excerpt,
+        content,
+        category: categoryId,
+      });
+      navigate(`/article/${slug}`);
+    } catch (e) {
+      alert("Failed to update article");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) return <div className="text-center py-20">Loading...</div>;
+
+  return (
+    <div className="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-sm border border-slate-100">
+      <h1 className="text-2xl font-bold mb-6 text-slate-900">Edit Article</h1>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Title</label>
+          <input 
+            type="text" 
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary outline-none"
+            required
+          />
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
+          <select 
+            value={categoryId}
+            onChange={e => setCategoryId(Number(e.target.value))}
+            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary outline-none"
+            required
+          >
+            <option value="" disabled>Select a category</option>
+            {categories.map(cat => (
+              <option key={cat.id} value={cat.id}>{cat.attributes.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Excerpt (Short Summary)</label>
+          <textarea 
+            value={excerpt}
+            onChange={e => setExcerpt(e.target.value)}
+            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary outline-none"
+            rows={3}
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Content (Markdown)</label>
+          <textarea 
+            value={content}
+            onChange={e => setContent(e.target.value)}
+            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary outline-none font-mono text-sm"
+            rows={10}
+            required
+          />
+        </div>
+
+        <div className="flex justify-end space-x-4 pt-4">
+          <button 
+            type="button" 
+            onClick={() => navigate(`/article/${slug}`)}
+            className="px-4 py-2 text-slate-600 font-medium hover:text-slate-800"
+          >
+            Cancel
+          </button>
+          <button 
+            type="submit" 
+            disabled={submitting}
+            className="bg-primary hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold transition-colors disabled:opacity-50"
+          >
+            {submitting ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
+// 5. Login Page
 const LoginPage: React.FC<{ onLogin: (data: any) => void }> = ({ onLogin }) => {
   const [identifier, setIdentifier] = useState('editor');
   const [password, setPassword] = useState('password'); // Default for demo
@@ -411,7 +563,7 @@ const LoginPage: React.FC<{ onLogin: (data: any) => void }> = ({ onLogin }) => {
   );
 };
 
-// 5. Register Page
+// 6. Register Page
 const RegisterPage: React.FC<{ onLogin: (data: any) => void }> = ({ onLogin }) => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -466,6 +618,7 @@ const App: React.FC = () => {
         <Route path="/" element={<HomePage />} />
         <Route path="/article/:slug" element={<ArticlePage user={user} />} />
         <Route path="/create" element={<CreateArticlePage user={user} />} />
+        <Route path="/edit/:slug" element={<EditArticlePage user={user} />} />
         
         <Route path="/login" element={
           user ? <Navigate to="/" /> : <LoginPage onLogin={login} />
