@@ -1,0 +1,4 @@
+{
+  "name": "NewsFlow Strapi Client",
+  "description": "A modern news frontend for Strapi with RBAC, filtering, and pagination."
+}
