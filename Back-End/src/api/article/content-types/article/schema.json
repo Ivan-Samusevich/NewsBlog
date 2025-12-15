@@ -18,10 +18,10 @@
     "slug": {
       "type": "uid",
       "targetField": "title",
-      "required": true
+      "required": false
     },
-    "context": {
-      "type": "blocks",
+    "content": {
+      "type": "text",
       "required": true
     },
     "excerpt": {

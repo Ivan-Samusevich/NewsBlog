@@ -446,7 +446,7 @@ export interface ApiArticleArticle extends Struct.CollectionTypeSchema {
       'plugin::users-permissions.user'
     >;
     category: Schema.Attribute.Relation<'manyToOne', 'api::category.category'>;
-    context: Schema.Attribute.Blocks & Schema.Attribute.Required;
+    content: Schema.Attribute.Text & Schema.Attribute.Required;
     coverImage: Schema.Attribute.Media<
       'images' | 'files' | 'videos' | 'audios'
     >;
@@ -464,7 +464,7 @@ export interface ApiArticleArticle extends Struct.CollectionTypeSchema {
     publishedAt: Schema.Attribute.DateTime;
     publishedDate: Schema.Attribute.Date;
     readingTime: Schema.Attribute.Integer;
-    slug: Schema.Attribute.UID<'title'> & Schema.Attribute.Required;
+    slug: Schema.Attribute.UID<'title'>;
     tags: Schema.Attribute.JSON;
     title: Schema.Attribute.String & Schema.Attribute.Required;
     updatedAt: Schema.Attribute.DateTime;
